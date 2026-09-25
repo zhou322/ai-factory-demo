@@ -1,0 +1,58 @@
+name: AI Factory - Improve Spec
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  improve:
+    if: >
+      github.event.issue.pull_request != null &&
+      startsWith(github.event.comment.body, '/revise')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "ai-factory-bot"
+          git config user.email "ai-factory-bot@users.noreply.github.com"
+
+      - name: Checkout the spec PR branch
+        run: gh pr checkout ${{ github.event.issue.number }}
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          prompt: |
+            你现在处于 AI Factory 流水线的 "improve" 阶段，当前分支已经 checkout 到对应的 spec PR
+            分支上。请先读一遍仓库根目录 CLAUDE.md 的 "improve" 阶段那一节。
+
+            PR / Issue 编号: ${{ github.event.issue.number }}
+            人工反馈（/revise 之后的内容就是反馈）:
+            ---
+            ${{ github.event.comment.body }}
+            ---
+
+            请完成:
+            1. 找到 specs/ 目录下这个 PR 对应的 spec 文件，依据反馈修改它（保持 TEMPLATE.md 的结构）。
+            2. `git add -A && git commit -m "spec: address review feedback"`
+            3. `git push`
+            4. `gh pr comment ${{ github.event.issue.number }} --body "已根据反馈更新 spec：<简述你改了什么>"`
+
+            不要新建 PR，不要修改 specs/ 之外的文件，不要改动 issue 的标签。
+          claude_args: |
+            --max-turns 10
+            --allowedTools "Bash,Read,Write,Edit,Grep,Glob"

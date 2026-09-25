@@ -1,0 +1,57 @@
+name: AI Factory - Deploy (demo)
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  deploy:
+    if: >
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'feature/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Build image
+        run: docker build -t ai-factory-demo:ci .
+
+      - name: Run container and smoke test
+        run: |
+          docker run -d --name ai-factory-demo -p 8000:8000 ai-factory-demo:ci
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "health check ok"
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://localhost:8000/health
+          docker logs ai-factory-demo
+          docker rm -f ai-factory-demo
+
+      - name: Resolve issue number
+        id: ctx
+        run: |
+          ref="${{ github.event.pull_request.head.ref }}"
+          num="$(echo "$ref" | sed -E 's#^feature/([0-9]+).*#\1#')"
+          echo "issue_number=$num" >> "$GITHUB_OUTPUT"
+
+      - name: Report deploy result on issue
+        run: |
+          gh issue comment "${{ steps.ctx.outputs.issue_number }}" \
+            --body "✅ 已合并并完成部署冒烟测试（演示环境）。PR: #${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" || true
+          gh issue edit "${{ steps.ctx.outputs.issue_number }}" \
+            --remove-label "stage:verify" --add-label "stage:done" \
+            --repo "${{ github.repository }}" || true
+          gh issue close "${{ steps.ctx.outputs.issue_number }}" \
+            --repo "${{ github.repository }}" || true

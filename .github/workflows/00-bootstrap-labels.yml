@@ -1,0 +1,28 @@
+name: Bootstrap AI Factory Labels
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  create-labels:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+    steps:
+      - name: Create or update stage labels
+        run: |
+          set -e
+          create_label () {
+            local name="$1" color="$2" desc="$3"
+            gh label create "$name" --color "$color" --description "$desc" --force \
+              --repo "${{ github.repository }}"
+          }
+          create_label "stage:init"        "ededed" "AI 正在澄清需求"
+          create_label "stage:plan"        "1d76db" "AI 正在写 spec"
+          create_label "stage:plan-review" "0e8a16" "spec 等待人工 review"
+          create_label "stage:improve"     "fbca04" "AI 正在根据反馈修改 spec"
+          create_label "stage:implement"   "5319e7" "AI 正在实现代码"
+          create_label "stage:verify"      "d93f0b" "PR 等待验证/人工 review"
+          create_label "stage:deploy"      "0052cc" "正在部署"
+          create_label "stage:done"        "2cbe4e" "流程完成"
+          create_label "needs-human-input" "e11d21" "AI 需要人补充信息才能继续"

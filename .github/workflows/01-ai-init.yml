@@ -1,0 +1,54 @@
+name: AI Factory - Init
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  init:
+    if: contains(github.event.issue.labels.*.name, 'stage:init')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      id-token: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          prompt: |
+            你现在处于 AI Factory 流水线的 "init" 阶段，请先读一遍仓库根目录的 CLAUDE.md（尤其是
+            "init" 阶段那一节）再开始工作。
+
+            仓库: ${{ github.repository }}
+            Issue 编号: ${{ github.event.issue.number }}
+            Issue 标题: ${{ github.event.issue.title }}
+            Issue 正文:
+            ---
+            ${{ github.event.issue.body }}
+            ---
+
+            请完成:
+            1. 判断这个需求描述是否足够清晰、可以进入写 spec 阶段。
+            2. 如果足够清晰：用 `gh issue comment ${{ github.event.issue.number }} --body "..."`
+               发一条评论，内容包括：(a) 你理解的问题重述 (b) 初步的验收标准草稿列表 (c) 你识别到的
+               任何边界情况/开放问题（如果有，不影响推进但值得记录）。然后执行
+               `gh issue edit ${{ github.event.issue.number }} --remove-label "stage:init" --add-label "stage:plan"`
+               把它推进到下一阶段。
+            3. 如果信息明显不够（比如完全看不出要做什么、验收标准无法推断）：评论里明确列出你需要
+               对方回答的具体问题，然后执行
+               `gh issue edit ${{ github.event.issue.number }} --remove-label "stage:init" --add-label "needs-human-input"`，
+               不要继续往下推进。
+            4. 只做这一件事，不要修改任何代码文件。
+          claude_args: |
+            --max-turns 6
+            --allowedTools "Bash,Read,Grep,Glob"

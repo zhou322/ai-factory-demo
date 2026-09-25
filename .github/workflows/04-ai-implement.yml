@@ -1,0 +1,77 @@
+name: AI Factory - Implement
+
+on:
+  pull_request:
+    types: [closed]
+  issue_comment:
+    types: [created]
+
+jobs:
+  implement:
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true &&
+        startsWith(github.event.pull_request.head.ref, 'spec/')) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request == null &&
+        startsWith(github.event.comment.body, '/implement'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+          fetch-depth: 0
+          ref: main
+
+      - name: Configure git identity
+        run: |
+          git config user.name "ai-factory-bot"
+          git config user.email "ai-factory-bot@users.noreply.github.com"
+
+      - name: Resolve issue number
+        id: ctx
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ref="${{ github.event.pull_request.head.ref }}"
+            num="$(echo "$ref" | sed -E 's#^spec/([0-9]+).*#\1#')"
+          else
+            num="${{ github.event.issue.number }}"
+          fi
+          echo "issue_number=$num" >> "$GITHUB_OUTPUT"
+
+      - name: Mark issue as implementing
+        run: |
+          gh issue edit "${{ steps.ctx.outputs.issue_number }}" \
+            --remove-label "stage:plan-review" --add-label "stage:implement" || true
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          prompt: |
+            你现在处于 AI Factory 流水线的 "implement" 阶段，请先读一遍仓库根目录 CLAUDE.md 的
+            "implement" 阶段那一节。
+
+            Issue 编号: ${{ steps.ctx.outputs.issue_number }}
+            对应的规格文档在 `specs/${{ steps.ctx.outputs.issue_number }}-*.md`，请先完整读一遍，
+            **只能依据这份已经被人工批准（对应的 spec PR 已合并）的规格来实现，不要自己重新解读 issue**。
+
+            请完成:
+            1. `git checkout -b feature/${{ steps.ctx.outputs.issue_number }}-<简短英文slug>`（slug 与 spec 文件名保持一致）
+            2. 按 spec 的方案设计、任务拆分实现代码，遵守 CLAUDE.md 里的代码风格约定。
+            3. 为新功能补充 `tests/` 下的测试，覆盖正常路径和至少一个错误路径。
+            4. 本地运行 `pytest -q`，必须全部通过。如果失败，修复直到通过；如果确实无法在合理范围内解决，
+               如实在 PR 描述里说明卡在哪里，不要隐瞒失败的测试。
+            5. `git add -A && git commit -m "feat: <简述> (#${{ steps.ctx.outputs.issue_number }})"`
+            6. `git push -u origin HEAD`
+            7. `gh pr create --base main --title "<功能标题>" --body "Closes #${{ steps.ctx.outputs.issue_number }}\n\n依据 specs/${{ steps.ctx.outputs.issue_number }}-*.md 实现。\n\n## 验收标准自查\n<列出 spec 里的每条 AC，标注是否已实现>"`
+            8. `gh issue edit ${{ steps.ctx.outputs.issue_number }} --remove-label "stage:implement" --add-label "stage:verify"`
+          claude_args: |
+            --max-turns 25
+            --allowedTools "Bash,Read,Write,Edit,Grep,Glob"
