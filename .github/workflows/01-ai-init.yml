@@ -26,29 +26,33 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GH_AUTOMATION_PAT }}
           prompt: |
-            你现在处于 AI Factory 流水线的 "init" 阶段，请先读一遍仓库根目录的 CLAUDE.md（尤其是
-            "init" 阶段那一节）再开始工作。
+            You are in the "init" stage of the AI Factory pipeline. First read the
+            repository's CLAUDE.md (especially the "init" stage section) before you
+            start.
 
-            仓库: ${{ github.repository }}
-            Issue 编号: ${{ github.event.issue.number }}
-            Issue 标题: ${{ github.event.issue.title }}
-            Issue 正文:
+            Repo: ${{ github.repository }}
+            Issue number: ${{ github.event.issue.number }}
+            Issue title: ${{ github.event.issue.title }}
+            Issue body:
             ---
             ${{ github.event.issue.body }}
             ---
 
-            请完成:
-            1. 判断这个需求描述是否足够清晰、可以进入写 spec 阶段。
-            2. 如果足够清晰：用 `gh issue comment ${{ github.event.issue.number }} --body "..."`
-               发一条评论，内容包括：(a) 你理解的问题重述 (b) 初步的验收标准草稿列表 (c) 你识别到的
-               任何边界情况/开放问题（如果有，不影响推进但值得记录）。然后执行
+            Do the following:
+            1. Decide whether this request is clear enough to move on to writing a spec.
+            2. If it is clear enough: post a comment with
+               `gh issue comment ${{ github.event.issue.number }} --body "..."` containing
+               (a) your restatement of the problem, (b) a draft list of acceptance
+               criteria, and (c) any edge cases / open questions you noticed (worth
+               recording even if they do not block moving forward). Then run
                `gh issue edit ${{ github.event.issue.number }} --remove-label "stage:init" --add-label "stage:plan"`
-               把它推进到下一阶段。
-            3. 如果信息明显不够（比如完全看不出要做什么、验收标准无法推断）：评论里明确列出你需要
-               对方回答的具体问题，然后执行
-               `gh issue edit ${{ github.event.issue.number }} --remove-label "stage:init" --add-label "needs-human-input"`，
-               不要继续往下推进。
-            4. 只做这一件事，不要修改任何代码文件。
+               to advance it to the next stage.
+            3. If the information is clearly insufficient (you genuinely cannot tell
+               what is being asked, or cannot infer any acceptance criteria): comment
+               with the specific questions you need answered, then run
+               `gh issue edit ${{ github.event.issue.number }} --remove-label "stage:init" --add-label "needs-human-input"`
+               and do not advance further.
+            4. Only do this one thing -- do not modify any code files.
           claude_args: |
             --max-turns 6
             --allowedTools "Bash,Read,Grep,Glob"

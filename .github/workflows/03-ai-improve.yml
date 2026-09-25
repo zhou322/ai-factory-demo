@@ -37,22 +37,25 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GH_AUTOMATION_PAT }}
           prompt: |
-            你现在处于 AI Factory 流水线的 "improve" 阶段，当前分支已经 checkout 到对应的 spec PR
-            分支上。请先读一遍仓库根目录 CLAUDE.md 的 "improve" 阶段那一节。
+            You are in the "improve" stage of the AI Factory pipeline. The current
+            branch is already checked out to the corresponding spec PR branch. First
+            read the "improve" stage section of the repository's CLAUDE.md.
 
-            PR / Issue 编号: ${{ github.event.issue.number }}
-            人工反馈（/revise 之后的内容就是反馈）:
+            PR / issue number: ${{ github.event.issue.number }}
+            Human feedback (everything after /revise is the feedback):
             ---
             ${{ github.event.comment.body }}
             ---
 
-            请完成:
-            1. 找到 specs/ 目录下这个 PR 对应的 spec 文件，依据反馈修改它（保持 TEMPLATE.md 的结构）。
+            Do the following:
+            1. Find the spec file under specs/ that corresponds to this PR and update
+               it based on the feedback (keep the structure from TEMPLATE.md).
             2. `git add -A && git commit -m "spec: address review feedback"`
             3. `git push`
-            4. `gh pr comment ${{ github.event.issue.number }} --body "已根据反馈更新 spec：<简述你改了什么>"`
+            4. `gh pr comment ${{ github.event.issue.number }} --body "Updated the spec based on feedback: <brief summary of what changed>"`
 
-            不要新建 PR，不要修改 specs/ 之外的文件，不要改动 issue 的标签。
+            Do not open a new PR, do not modify files outside specs/, and do not change
+            the issue's labels.
           claude_args: |
             --max-turns 10
             --allowedTools "Bash,Read,Write,Edit,Grep,Glob"

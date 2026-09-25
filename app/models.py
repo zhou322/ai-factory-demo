@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 
 
 class TodoBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=200, description="Todo 标题")
-    done: bool = Field(default=False, description="是否完成")
+    title: str = Field(..., min_length=1, max_length=200, description="Todo title")
+    done: bool = Field(default=False, description="Whether the todo is done")
 
 
 class TodoCreate(TodoBase):

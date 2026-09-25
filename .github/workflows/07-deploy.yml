@@ -48,7 +48,7 @@ jobs:
       - name: Report deploy result on issue
         run: |
           gh issue comment "${{ steps.ctx.outputs.issue_number }}" \
-            --body "✅ 已合并并完成部署冒烟测试（演示环境）。PR: #${{ github.event.pull_request.number }}" \
+            --body "✅ Merged and passed the deploy smoke test (demo environment). PR: #${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" || true
           gh issue edit "${{ steps.ctx.outputs.issue_number }}" \
             --remove-label "stage:verify" --add-label "stage:done" \

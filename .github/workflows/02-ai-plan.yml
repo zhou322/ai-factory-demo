@@ -32,27 +32,29 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GH_AUTOMATION_PAT }}
           prompt: |
-            你现在处于 AI Factory 流水线的 "plan" 阶段，请先读一遍仓库根目录的 CLAUDE.md
-            （"plan" 阶段那一节）和 specs/TEMPLATE.md。
+            You are in the "plan" stage of the AI Factory pipeline. First read the
+            repository's CLAUDE.md (the "plan" stage section) and specs/TEMPLATE.md.
 
-            仓库: ${{ github.repository }}
-            Issue 编号: ${{ github.event.issue.number }}
-            Issue 标题: ${{ github.event.issue.title }}
-            Issue 正文与既有评论请用 `gh issue view ${{ github.event.issue.number }} --comments` 查看，
-            里面包含 init 阶段整理出的问题重述和验收标准草稿，以它为准。
+            Repo: ${{ github.repository }}
+            Issue number: ${{ github.event.issue.number }}
+            Issue title: ${{ github.event.issue.title }}
+            Read the issue body and existing comments with
+            `gh issue view ${{ github.event.issue.number }} --comments` -- it includes
+            the problem restatement and draft acceptance criteria produced during the
+            init stage. Treat that as the source of truth.
 
-            请完成:
-            1. `git checkout -b spec/${{ github.event.issue.number }}-<简短英文slug>`
-            2. 依据 specs/TEMPLATE.md 的结构，写一份完整规格到
-               `specs/${{ github.event.issue.number }}-<同样的slug>.md`，替换掉所有占位符，
-               验收标准要具体、可测试。
-            3. `git add -A && git commit -m "spec: <标题> (#${{ github.event.issue.number }})"`
+            Do the following:
+            1. `git checkout -b spec/${{ github.event.issue.number }}-<short-english-slug>`
+            2. Following the structure in specs/TEMPLATE.md, write a complete spec to
+               `specs/${{ github.event.issue.number }}-<same-slug>.md`, replacing every
+               placeholder. Acceptance criteria must be specific and testable.
+            3. `git add -A && git commit -m "spec: <title> (#${{ github.event.issue.number }})"`
             4. `git push -u origin HEAD`
-            5. `gh pr create --base main --title "spec: <标题>" --body "Refs #${{ github.event.issue.number }}\n\n本 PR 只包含规格文档，等待 review。"`
-            6. `gh issue comment ${{ github.event.issue.number }} --body "spec 已提交，请 review：<PR链接>"`
+            5. `gh pr create --base main --title "spec: <title>" --body "Refs #${{ github.event.issue.number }}\n\nThis PR only contains the spec document, pending review."`
+            6. `gh issue comment ${{ github.event.issue.number }} --body "Spec submitted for review: <PR link>"`
             7. `gh issue edit ${{ github.event.issue.number }} --remove-label "stage:plan" --add-label "stage:plan-review"`
 
-            只修改 specs/ 目录下的文件，不要动其他代码。
+            Only touch files under specs/, do not modify anything else.
           claude_args: |
             --max-turns 12
             --allowedTools "Bash,Read,Write,Edit,Grep,Glob"

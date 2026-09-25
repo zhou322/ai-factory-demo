@@ -55,22 +55,28 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GH_AUTOMATION_PAT }}
           prompt: |
-            你现在处于 AI Factory 流水线的 "implement" 阶段，请先读一遍仓库根目录 CLAUDE.md 的
-            "implement" 阶段那一节。
+            You are in the "implement" stage of the AI Factory pipeline. First read
+            the "implement" stage section of the repository's CLAUDE.md.
 
-            Issue 编号: ${{ steps.ctx.outputs.issue_number }}
-            对应的规格文档在 `specs/${{ steps.ctx.outputs.issue_number }}-*.md`，请先完整读一遍，
-            **只能依据这份已经被人工批准（对应的 spec PR 已合并）的规格来实现，不要自己重新解读 issue**。
+            Issue number: ${{ steps.ctx.outputs.issue_number }}
+            The matching spec is at `specs/${{ steps.ctx.outputs.issue_number }}-*.md` --
+            read it in full first. **You may only implement against this already
+            human-approved spec (its PR has been merged); do not reinterpret the raw
+            issue yourself.**
 
-            请完成:
-            1. `git checkout -b feature/${{ steps.ctx.outputs.issue_number }}-<简短英文slug>`（slug 与 spec 文件名保持一致）
-            2. 按 spec 的方案设计、任务拆分实现代码，遵守 CLAUDE.md 里的代码风格约定。
-            3. 为新功能补充 `tests/` 下的测试，覆盖正常路径和至少一个错误路径。
-            4. 本地运行 `pytest -q`，必须全部通过。如果失败，修复直到通过；如果确实无法在合理范围内解决，
-               如实在 PR 描述里说明卡在哪里，不要隐瞒失败的测试。
-            5. `git add -A && git commit -m "feat: <简述> (#${{ steps.ctx.outputs.issue_number }})"`
+            Do the following:
+            1. `git checkout -b feature/${{ steps.ctx.outputs.issue_number }}-<short-english-slug>`
+               (use the same slug as the spec filename)
+            2. Implement the code per the spec's design and task breakdown, following
+               the code style conventions in CLAUDE.md.
+            3. Add tests under `tests/` for the new feature, covering the happy path
+               and at least one error path.
+            4. Run `pytest -q` locally -- it must pass fully. If it fails, fix it; if
+               you genuinely cannot fix it within reason, say so honestly in the PR
+               description instead of hiding a failing test.
+            5. `git add -A && git commit -m "feat: <summary> (#${{ steps.ctx.outputs.issue_number }})"`
             6. `git push -u origin HEAD`
-            7. `gh pr create --base main --title "<功能标题>" --body "Closes #${{ steps.ctx.outputs.issue_number }}\n\n依据 specs/${{ steps.ctx.outputs.issue_number }}-*.md 实现。\n\n## 验收标准自查\n<列出 spec 里的每条 AC，标注是否已实现>"`
+            7. `gh pr create --base main --title "<feature title>" --body "Closes #${{ steps.ctx.outputs.issue_number }}\n\nImplemented per specs/${{ steps.ctx.outputs.issue_number }}-*.md.\n\n## Acceptance criteria self-check\n<list every AC from the spec, marking whether it was implemented>"`
             8. `gh issue edit ${{ steps.ctx.outputs.issue_number }} --remove-label "stage:implement" --add-label "stage:verify"`
           claude_args: |
             --max-turns 25

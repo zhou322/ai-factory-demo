@@ -1,47 +1,47 @@
-# Spec: <功能标题>
+# Spec: <Feature title>
 
-- Issue: #<编号>
-- 状态: Draft | In Review | Approved
-- 创建时间: <日期>
+- Issue: #<number>
+- Status: Draft | In Review | Approved
+- Created: <date>
 
-## 1. 背景 / 问题陈述
+## 1. Background / Problem statement
 
-（这个功能要解决什么问题，为什么现在需要它）
+(What problem does this solve, and why now)
 
-## 2. 目标
-
-- ...
-
-## 3. 非目标（Out of Scope）
+## 2. Goals
 
 - ...
 
-## 4. 方案设计
+## 3. Non-goals (Out of Scope)
 
-### 4.1 API 变更
+- ...
 
-| 方法 | 路径 | 说明 |
+## 4. Design
+
+### 4.1 API changes
+
+| Method | Path | Description |
 | --- | --- | --- |
 |  |  |  |
 
-### 4.2 数据模型变更
+### 4.2 Data model changes
 
-（新增/修改的 Pydantic 模型字段）
+(New/changed Pydantic model fields)
 
-### 4.3 关键实现点 / 边界情况
+### 4.3 Key implementation notes / edge cases
 
 - ...
 
-## 5. 任务拆分
+## 5. Task breakdown
 
-- [ ] 任务 1
-- [ ] 任务 2
+- [ ] Task 1
+- [ ] Task 2
 
-## 6. 验收标准（Acceptance Criteria）
+## 6. Acceptance Criteria
 
 - [ ] AC1: ...
 - [ ] AC2: ...
 
-## 7. 风险与回滚
+## 7. Risks and rollback
 
-（如果这个改动有风险，怎么回滚）
+(If this change carries risk, how to roll it back)

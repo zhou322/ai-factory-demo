@@ -25,18 +25,24 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            你现在处于 AI Factory 流水线的 "verify" 阶段。当前分支名: ${{ github.event.pull_request.head.ref }}，
-            从分支名里能解析出 issue 编号（`feature/<编号>-...`），对应的规格文档在
-            `specs/<编号>-*.md`。
+            You are in the "verify" stage of the AI Factory pipeline. The current
+            branch is `${{ github.event.pull_request.head.ref }}`, whose name encodes
+            the issue number (`feature/<number>-...`). The matching spec is at
+            `specs/<number>-*.md`.
 
-            请完成:
-            1. 读取该 spec 文件里的"验收标准"(Acceptance Criteria)章节。
-            2. 用 `git diff origin/main...HEAD` 查看这个 PR 相对 main 的完整改动。
-            3. 逐条对照每一条验收标准，判断这份改动是否满足它（看代码 + 看有没有对应测试）。
-            4. 用 `gh pr comment ${{ github.event.pull_request.number }} --body "..."` 发一条评论，
-               格式为一份 checklist：每条 AC 一行，`- [x]` 表示满足、`- [ ]` 表示不满足并简要说明原因，
-               最后给一句总体结论（"建议合并" 或 "建议先修复以上问题再合并"）。
-            5. 这一步只做只读分析 + 评论，绝对不要修改任何文件、不要 commit、不要改标签、不要合并 PR。
+            Do the following:
+            1. Read that spec's "Acceptance Criteria" section.
+            2. Run `git diff origin/main...HEAD` to see the full diff of this PR
+               against main.
+            3. Check each acceptance criterion against the diff (look at the code and
+               whether there are matching tests).
+            4. Post a comment with
+               `gh pr comment ${{ github.event.pull_request.number }} --body "..."` as a
+               checklist: one line per AC, `- [x]` if satisfied, `- [ ]` if not (with a
+               short reason), and a final overall verdict ("recommend merging" or
+               "recommend fixing the above before merging").
+            5. This step is read-only analysis + commenting only -- never modify any
+               files, never commit, never change labels, never merge the PR.
           claude_args: |
             --max-turns 8
             --allowedTools "Bash,Read,Grep,Glob"

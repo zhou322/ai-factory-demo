@@ -1,7 +1,8 @@
 """Todo CRUD endpoints backed by an in-memory store.
 
-这是一个演示用的最小实现：数据只保存在进程内存里，重启即丢失。
-它的作用只是给 AI Factory 流水线一个"可以被 issue 驱动着不断演进"的载体。
+This is a minimal demo implementation: data lives only in process memory and
+is lost on restart. Its only purpose is to give the AI Factory pipeline a
+vehicle that can keep evolving, driven entirely by GitHub issues.
 """
 from __future__ import annotations
 

@@ -1,111 +1,139 @@
-# AI Factory 全自动开发流水线
+# AI Factory: fully automated development pipeline
 
-这个仓库演示一种"AI Factory + Spec-Driven Development"的全自动开发模式：
-**人只负责提出想法（开 issue）和把关关键节点（review / merge），
-中间从需求澄清到写代码、开 PR、跑测试、部署的全过程都由 AI 通过 GitHub Actions 自动完成。**
+This repository demonstrates an "AI Factory + Spec-Driven Development"
+pattern: **humans only propose ideas (open an issue) and gate the key
+checkpoints (review / merge); everything in between -- clarifying
+requirements, writing specs, implementing code, opening PRs, running
+tests, and deploying -- is done automatically by AI through GitHub
+Actions.**
 
-FastAPI 的 Todo API 只是一个最小的验证载体，你可以在此基础上不断通过 issue 演进它。
+The FastAPI Todo API is just a minimal vehicle to validate this; you can
+keep evolving it purely through issues.
 
-## 1. 整体状态机
+## 1. Overall state machine
 
 ```
-        (人) 开 issue
+        (human) opens issue
               |
               v
-        stage:init  ──────────────▶ needs-human-input（信息不够，AI 提问后停住）
-              | AI 整理问题/验收标准
+        stage:init  ──────────────▶ needs-human-input (not enough info; AI asks and stops)
+              | AI drafts problem statement / acceptance criteria
               v
-        stage:plan  ── AI 依据 specs/TEMPLATE.md 写 spec，开 spec PR
+        stage:plan  ── AI writes a spec per specs/TEMPLATE.md, opens a spec PR
               |
               v
-     stage:plan-review ──/revise反馈──▶ stage:improve（AI 改 spec，循环回 plan-review）
-              | 人 review 通过 -> 合并 spec PR
+     stage:plan-review ──/revise feedback──▶ stage:improve (AI updates the spec, loops back to plan-review)
+              | human approves -> merges the spec PR
               v
-        stage:implement ── AI 依据已合并的 spec 实现代码+测试，开实现 PR
+        stage:implement ── AI implements code + tests against the merged spec, opens an implementation PR
               |
               v
-        stage:verify ── 标准 CI（pytest/lint）+ AI 自查验收标准，贴 checklist
+        stage:verify ── standard CI (pytest/lint) + AI self-check against acceptance criteria, posts a checklist
               |
               v
-        （人）review 通过 -> 合并实现 PR 进 main
+        (human) reviews and merges the implementation PR into main
               |
               v
-        stage:deploy ── 自动构建 + 冒烟测试（演示性质），成功后关闭 issue
+        stage:deploy ── automatic build + smoke test (demo-grade), closes the issue on success
               |
               v
         stage:done
 ```
 
-标签（label）就是这个状态机的"当前状态"，每个阶段对应的 workflow 只在自己负责的标签/事件上被触发，
-完成后自己把标签推进到下一个状态——这是全自动化的关键，人不需要手工改标签。
+Labels are the "current state" of this state machine. Each stage's workflow
+only fires on the event/label it owns, and advances the label itself once
+its work is done -- that is what makes the whole thing fully automated
+without a human touching labels by hand.
 
-## 2. 前置准备（必须手动做一次）
+## 2. One-time setup (must be done manually)
 
-### 2.1 安装 Claude GitHub App
+### 2.1 Install the Claude GitHub App
 
-打开 https://github.com/apps/claude ，安装到 `zhou322/ai-factory-demo` 这个仓库。
+Go to https://github.com/apps/claude and install it on
+`zhou322/ai-factory-demo`.
 
-### 2.2 添加两个 repository secret
+### 2.2 Add two repository secrets
 
-进入 GitHub 仓库 → Settings → Secrets and variables → Actions → New repository secret，添加：
+GitHub repo -> Settings -> Secrets and variables -> Actions -> New
+repository secret:
 
-1. `ANTHROPIC_API_KEY`：从 https://platform.claude.com 的 Console 里生成的 API Key。
-   （如果你用的是 Claude 订阅而不是按量计费的 API，改用 `CLAUDE_CODE_OAUTH_TOKEN`，
-   本地跑 `claude setup-token` 生成，然后把所有 workflow 里的 `anthropic_api_key` 那一行
-   换成 `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`。）
+1. `ANTHROPIC_API_KEY`: an API key generated from the Console at
+   https://platform.claude.com.
+   (If you use a Claude subscription instead of pay-as-you-go API billing,
+   use `CLAUDE_CODE_OAUTH_TOKEN` instead -- generate it locally with
+   `claude setup-token`, then replace the `anthropic_api_key` line in every
+   workflow with `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`.)
 
-2. `GH_AUTOMATION_PAT`：**这一步很重要，不能跳过。**
-   GitHub Actions 默认的 `GITHUB_TOKEN` 有一个"防递归"机制：用它做的
-   git push / 开 PR / 加标签，不会触发其它 workflow（否则容易死循环）。
-   但我们这条流水线恰恰需要"AI 加了个标签 -> 触发下一个 workflow"这种链式反应，
-   所以必须用一个真正的 Personal Access Token 来代替默认 token。
+2. `GH_AUTOMATION_PAT`: **this step matters, do not skip it.**
+   GitHub Actions' default `GITHUB_TOKEN` has an anti-recursion mechanism:
+   a git push / PR / label change made with it will not trigger other
+   workflows (this exists to prevent infinite loops). But this pipeline
+   relies exactly on that kind of chain reaction ("AI adds a label ->
+   triggers the next workflow"), so it needs a real Personal Access Token
+   instead of the default token.
 
-   创建步骤：GitHub 右上角头像 → Settings → Developer settings → Personal access tokens
-   → Fine-grained tokens → Generate new token：
-   - Repository access 选 "Only select repositories" → 选 `ai-factory-demo`
-   - Permissions 里勾选：Contents（Read and write）、Issues（Read and write）、
-     Pull requests（Read and write）
-   - 生成后把 token 粘贴进仓库 secret `GH_AUTOMATION_PAT`
+   How to create one: GitHub avatar (top right) -> Settings -> Developer
+   settings -> Personal access tokens -> Fine-grained tokens -> Generate
+   new token:
+   - Repository access: "Only select repositories" -> select
+     `ai-factory-demo`
+   - Permissions: Contents (Read and write), Issues (Read and write),
+     Pull requests (Read and write)
+   - Paste the generated token into the repository secret `GH_AUTOMATION_PAT`
 
-### 2.3 初始化 labels
+### 2.3 Bootstrap the labels
 
-仓库的 Actions 页面手动运行一次 `00-bootstrap-labels` workflow
-（Actions → Bootstrap AI Factory Labels → Run workflow），
-它会用 `GH_AUTOMATION_PAT` 创建流水线需要的所有 `stage:*` 标签。
+From the repo's Actions tab, manually run the `00-bootstrap-labels`
+workflow once (Actions -> Bootstrap AI Factory Labels -> Run workflow). It
+uses `GH_AUTOMATION_PAT` to create every `stage:*` label the pipeline
+needs.
 
-## 3. 日常使用方式
+## 3. Day-to-day usage
 
-1. 用 "Feature Request" issue 模板开一个新 issue，描述你想要 FastAPI 应用具备的新功能。
-2. 之后什么都不用做，观察 issue 的标签和评论，AI 会自动：
-   - 在 `stage:init` 阶段把你的需求整理成清晰的问题陈述（信息不够会反问你）；
-   - 在 `stage:plan` 阶段开一个 spec PR，你去 review 这份规格文档；
-   - 如果规格有问题，直接在 PR 上评论 `/revise 你的意见`，AI 会修改；
-   - 你觉得 spec OK 了，合并这个 spec PR；
-   - AI 自动开始实现，开出真正的代码 PR，CI 跑测试，AI 自己对照验收标准做一次自查；
-   - 你 review 代码 PR，没问题就合并；
-   - 合并后自动"部署"（这里是演示性质的构建 + 健康检查），并回到 issue 里报告完成，关闭 issue。
-3. 如果某个阶段卡住了 / AI 理解错了，直接在 issue 或对应 PR 下用自然语言评论，
-   或者用 `@claude ...` 直接对话调整（因为装了 Claude GitHub App，`@claude` 随时可用）。
+1. Open a new issue using the "Feature Request" template describing the
+   feature you want the FastAPI app to have.
+2. From there, do nothing and just watch the issue's labels and comments.
+   The AI will automatically:
+   - clarify your request into a clean problem statement during
+     `stage:init` (and ask you questions if it is not clear enough);
+   - open a spec PR for you to review during `stage:plan`;
+   - if the spec needs changes, comment `/revise your feedback` directly on
+     the PR and the AI will update it;
+   - once you are happy with the spec, merge that spec PR;
+   - the AI then implements the real code, opens the implementation PR, CI
+     runs the tests, and the AI self-checks it against the acceptance
+     criteria;
+   - you review the code PR and merge it once you are satisfied;
+   - after the merge it "deploys" automatically (a demo-grade build +
+     health check), reports back on the issue, and closes it.
+3. If a stage ever gets stuck or the AI misunderstood something, just
+   comment in natural language on the issue or the relevant PR, or talk to
+   it directly with `@claude ...` (the Claude GitHub App is installed, so
+   `@claude` works anywhere).
 
-## 4. Workflow 文件一览
+## 4. Workflow file overview
 
-| 文件 | 触发条件 | 职责 |
+| File | Trigger | Responsibility |
 | --- | --- | --- |
-| `00-bootstrap-labels.yml` | 手动 (`workflow_dispatch`) | 创建/更新所有 `stage:*` 标签 |
-| `01-ai-init.yml` | issue 被打开 | 需求澄清，产出验收标准草稿，推进到 `stage:plan` |
-| `02-ai-plan.yml` | issue 被打上 `stage:plan` 标签 | 写 spec，开 spec PR，推进到 `stage:plan-review` |
-| `03-ai-improve.yml` | 在 spec PR / issue 下评论 `/revise ...` | 按反馈修改 spec |
-| `04-ai-implement.yml` | spec PR 合并，或评论 `/implement` | 依据 spec 写代码+测试，开实现 PR，推进到 `stage:verify` |
-| `05-ci.yml` | 任意 PR | 标准 CI：安装依赖、`pytest`、`ruff` |
-| `06-ai-verify.yml` | `feature/*` 分支的 PR | AI 对照 spec 验收标准自查，贴 checklist |
-| `07-deploy.yml` | push 到 `main` | 演示性"部署"：构建 + 健康检查冒烟测试，回写 issue 并关闭 |
+| `00-bootstrap-labels.yml` | Manual (`workflow_dispatch`) | Create/update all `stage:*` labels |
+| `01-ai-init.yml` | Issue opened | Clarify requirements, draft acceptance criteria, advance to `stage:plan` |
+| `02-ai-plan.yml` | Issue labeled `stage:plan` | Write the spec, open the spec PR, advance to `stage:plan-review` |
+| `03-ai-improve.yml` | Comment `/revise ...` on the spec PR / issue | Update the spec based on feedback |
+| `04-ai-implement.yml` | Spec PR merged, or comment `/implement` | Implement code + tests against the spec, open the implementation PR, advance to `stage:verify` |
+| `05-ci.yml` | Any PR | Standard CI: install deps, `pytest`, `ruff` |
+| `06-ai-verify.yml` | PR from a `feature/*` branch | AI self-checks the diff against the spec's acceptance criteria, posts a checklist |
+| `07-deploy.yml` | Push to `main` | Demo-grade "deploy": build + health-check smoke test, report back and close the issue |
 
-## 5. 已知的取舍（demo 阶段）
+## 5. Known trade-offs (demo stage)
 
-- "部署"是演示性质的（本地构建 Docker 镜像 + 起容器做 `/health` 冒烟测试），
-  没有接真实的云环境；如果要接真实部署，替换 `07-deploy.yml` 最后一步即可。
-- 一个 issue 对应一个 spec / 一条功能分支，没有处理多个 issue 并发修改同一批文件的合并冲突场景，
-  这是刻意简化，方便先把"全自动流水线"跑通。
-- `stage:plan-review` 到 `stage:implement` 的推进依赖"spec PR 被合并"这个信号，
-  如果你更喜欢"人工评论 /approve-plan 就推进"而不是必须合并 PR，
-  可以调整 `04-ai-implement.yml` 的触发条件。
+- "Deploy" is demo-grade (build a Docker image locally + run the container
+  + smoke-test `/health`), with no real cloud environment behind it. Wire
+  up a real deployment by replacing the last step of `07-deploy.yml`.
+- One issue maps to one spec / one feature branch; concurrent issues
+  editing the same files and merge conflicts between them are not handled.
+  This is a deliberate simplification to get the "fully automated
+  pipeline" itself working first.
+- Advancing from `stage:plan-review` to `stage:implement` relies on the
+  signal "the spec PR was merged". If you would rather advance on a human
+  comment like `/approve-plan` instead of requiring the PR to be merged,
+  adjust the trigger condition in `04-ai-implement.yml`.

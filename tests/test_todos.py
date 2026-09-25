@@ -17,10 +17,10 @@ def test_health() -> None:
 
 
 def test_create_and_list_todo() -> None:
-    resp = client.post("/todos", json={"title": "写 spec"})
+    resp = client.post("/todos", json={"title": "Write the spec"})
     assert resp.status_code == 201
     body = resp.json()
-    assert body["title"] == "写 spec"
+    assert body["title"] == "Write the spec"
     assert body["done"] is False
 
     resp = client.get("/todos")
@@ -34,7 +34,7 @@ def test_get_missing_todo_returns_404() -> None:
 
 
 def test_update_and_delete_todo() -> None:
-    created = client.post("/todos", json={"title": "实现功能"}).json()
+    created = client.post("/todos", json={"title": "Implement the feature"}).json()
     todo_id = created["id"]
 
     resp = client.patch(f"/todos/{todo_id}", json={"done": True})
