@@ -1,0 +1,83 @@
+name: AI Factory - Implement
+
+on:
+  pull_request:
+    types: [closed]
+  issue_comment:
+    types: [created]
+
+jobs:
+  implement:
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true &&
+        startsWith(github.event.pull_request.head.ref, 'spec/')) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request == null &&
+        startsWith(github.event.comment.body, '/implement'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+          fetch-depth: 0
+          ref: main
+
+      - name: Configure git identity
+        run: |
+          git config user.name "ai-factory-bot"
+          git config user.email "ai-factory-bot@users.noreply.github.com"
+
+      - name: Resolve issue number
+        id: ctx
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ref="${{ github.event.pull_request.head.ref }}"
+            num="$(echo "$ref" | sed -E 's#^spec/([0-9]+).*#\1#')"
+          else
+            num="${{ github.event.issue.number }}"
+          fi
+          echo "issue_number=$num" >> "$GITHUB_OUTPUT"
+
+      - name: Mark issue as implementing
+        run: |
+          gh issue edit "${{ steps.ctx.outputs.issue_number }}" \
+            --remove-label "stage:plan-review" --add-label "stage:implement" || true
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          prompt: |
+            You are in the "implement" stage of the AI Factory pipeline. First read
+            the "implement" stage section of the repository's CLAUDE.md.
+
+            Issue number: ${{ steps.ctx.outputs.issue_number }}
+            The matching spec is at `specs/${{ steps.ctx.outputs.issue_number }}-*.md` --
+            read it in full first. **You may only implement against this already
+            human-approved spec (its PR has been merged); do not reinterpret the raw
+            issue yourself.**
+
+            Do the following:
+            1. `git checkout -b feature/${{ steps.ctx.outputs.issue_number }}-<short-english-slug>`
+               (use the same slug as the spec filename)
+            2. Implement the code per the spec's design and task breakdown, following
+               the code style conventions in CLAUDE.md.
+            3. Add tests under `tests/` for the new feature, covering the happy path
+               and at least one error path.
+            4. Run `pytest -q` locally -- it must pass fully. If it fails, fix it; if
+               you genuinely cannot fix it within reason, say so honestly in the PR
+               description instead of hiding a failing test.
+            5. `git add -A && git commit -m "feat: <summary> (#${{ steps.ctx.outputs.issue_number }})"`
+            6. `git push -u origin HEAD`
+            7. `gh pr create --base main --title "<feature title>" --body "Closes #${{ steps.ctx.outputs.issue_number }}\n\nImplemented per specs/${{ steps.ctx.outputs.issue_number }}-*.md.\n\n## Acceptance criteria self-check\n<list every AC from the spec, marking whether it was implemented>"`
+            8. `gh issue edit ${{ steps.ctx.outputs.issue_number }} --remove-label "stage:implement" --add-label "stage:verify"`
+          claude_args: |
+            --max-turns 25
+            --allowedTools "Bash,Read,Write,Edit,Grep,Glob"

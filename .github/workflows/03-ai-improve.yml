@@ -1,0 +1,61 @@
+name: AI Factory - Improve Spec
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  improve:
+    if: >
+      github.event.issue.pull_request != null &&
+      startsWith(github.event.comment.body, '/revise')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "ai-factory-bot"
+          git config user.email "ai-factory-bot@users.noreply.github.com"
+
+      - name: Checkout the spec PR branch
+        run: gh pr checkout ${{ github.event.issue.number }}
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          prompt: |
+            You are in the "improve" stage of the AI Factory pipeline. The current
+            branch is already checked out to the corresponding spec PR branch. First
+            read the "improve" stage section of the repository's CLAUDE.md.
+
+            PR / issue number: ${{ github.event.issue.number }}
+            Human feedback (everything after /revise is the feedback):
+            ---
+            ${{ github.event.comment.body }}
+            ---
+
+            Do the following:
+            1. Find the spec file under specs/ that corresponds to this PR and update
+               it based on the feedback (keep the structure from TEMPLATE.md).
+            2. `git add -A && git commit -m "spec: address review feedback"`
+            3. `git push`
+            4. `gh pr comment ${{ github.event.issue.number }} --body "Updated the spec based on feedback: <brief summary of what changed>"`
+
+            Do not open a new PR, do not modify files outside specs/, and do not change
+            the issue's labels.
+          claude_args: |
+            --max-turns 10
+            --allowedTools "Bash,Read,Write,Edit,Grep,Glob"

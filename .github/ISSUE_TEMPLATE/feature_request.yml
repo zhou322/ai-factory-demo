@@ -1,0 +1,27 @@
+name: Feature Request
+description: Submit a new feature request to the AI Factory pipeline. The AI will automatically clarify it, write a spec, implement, test, and deploy it.
+title: "[Feature] "
+labels: ["stage:init"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve / feature you want
+      description: Plain language is fine, no need to write a formal requirements doc -- the AI will help structure it.
+      placeholder: "Example: I want todos to be filterable by done status, and taggable..."
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Background / additional context (optional)
+      description: Any constraints, references, or priority worth mentioning?
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I understand this issue will be handled automatically by AI (clarify -> spec -> implement -> test -> deploy), and I will review it at the key checkpoints
+          required: true

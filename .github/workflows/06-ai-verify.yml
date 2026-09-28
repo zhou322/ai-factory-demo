@@ -1,0 +1,48 @@
+name: AI Factory - Verify
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+jobs:
+  verify:
+    if: startsWith(github.event.pull_request.head.ref, 'feature/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are in the "verify" stage of the AI Factory pipeline. The current
+            branch is `${{ github.event.pull_request.head.ref }}`, whose name encodes
+            the issue number (`feature/<number>-...`). The matching spec is at
+            `specs/<number>-*.md`.
+
+            Do the following:
+            1. Read that spec's "Acceptance Criteria" section.
+            2. Run `git diff origin/main...HEAD` to see the full diff of this PR
+               against main.
+            3. Check each acceptance criterion against the diff (look at the code and
+               whether there are matching tests).
+            4. Post a comment with
+               `gh pr comment ${{ github.event.pull_request.number }} --body "..."` as a
+               checklist: one line per AC, `- [x]` if satisfied, `- [ ]` if not (with a
+               short reason), and a final overall verdict ("recommend merging" or
+               "recommend fixing the above before merging").
+            5. This step is read-only analysis + commenting only -- never modify any
+               files, never commit, never change labels, never merge the PR.
+          claude_args: |
+            --max-turns 8
+            --allowedTools "Bash,Read,Grep,Glob"

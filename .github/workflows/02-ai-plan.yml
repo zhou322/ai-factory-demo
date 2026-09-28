@@ -1,0 +1,60 @@
+name: AI Factory - Plan
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  plan:
+    if: github.event.label.name == 'stage:plan'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "ai-factory-bot"
+          git config user.email "ai-factory-bot@users.noreply.github.com"
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          prompt: |
+            You are in the "plan" stage of the AI Factory pipeline. First read the
+            repository's CLAUDE.md (the "plan" stage section) and specs/TEMPLATE.md.
+
+            Repo: ${{ github.repository }}
+            Issue number: ${{ github.event.issue.number }}
+            Issue title: ${{ github.event.issue.title }}
+            Read the issue body and existing comments with
+            `gh issue view ${{ github.event.issue.number }} --comments` -- it includes
+            the problem restatement and draft acceptance criteria produced during the
+            init stage. Treat that as the source of truth.
+
+            Do the following:
+            1. `git checkout -b spec/${{ github.event.issue.number }}-<short-english-slug>`
+            2. Following the structure in specs/TEMPLATE.md, write a complete spec to
+               `specs/${{ github.event.issue.number }}-<same-slug>.md`, replacing every
+               placeholder. Acceptance criteria must be specific and testable.
+            3. `git add -A && git commit -m "spec: <title> (#${{ github.event.issue.number }})"`
+            4. `git push -u origin HEAD`
+            5. `gh pr create --base main --title "spec: <title>" --body "Refs #${{ github.event.issue.number }}\n\nThis PR only contains the spec document, pending review."`
+            6. `gh issue comment ${{ github.event.issue.number }} --body "Spec submitted for review: <PR link>"`
+            7. `gh issue edit ${{ github.event.issue.number }} --remove-label "stage:plan" --add-label "stage:plan-review"`
+
+            Only touch files under specs/, do not modify anything else.
+          claude_args: |
+            --max-turns 12
+            --allowedTools "Bash,Read,Write,Edit,Grep,Glob"

@@ -1,0 +1,58 @@
+name: AI Factory - Init
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  init:
+    if: contains(github.event.issue.labels.*.name, 'stage:init')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      id-token: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          prompt: |
+            You are in the "init" stage of the AI Factory pipeline. First read the
+            repository's CLAUDE.md (especially the "init" stage section) before you
+            start.
+
+            Repo: ${{ github.repository }}
+            Issue number: ${{ github.event.issue.number }}
+            Issue title: ${{ github.event.issue.title }}
+            Issue body:
+            ---
+            ${{ github.event.issue.body }}
+            ---
+
+            Do the following:
+            1. Decide whether this request is clear enough to move on to writing a spec.
+            2. If it is clear enough: post a comment with
+               `gh issue comment ${{ github.event.issue.number }} --body "..."` containing
+               (a) your restatement of the problem, (b) a draft list of acceptance
+               criteria, and (c) any edge cases / open questions you noticed (worth
+               recording even if they do not block moving forward). Then run
+               `gh issue edit ${{ github.event.issue.number }} --remove-label "stage:init" --add-label "stage:plan"`
+               to advance it to the next stage.
+            3. If the information is clearly insufficient (you genuinely cannot tell
+               what is being asked, or cannot infer any acceptance criteria): comment
+               with the specific questions you need answered, then run
+               `gh issue edit ${{ github.event.issue.number }} --remove-label "stage:init" --add-label "needs-human-input"`
+               and do not advance further.
+            4. Only do this one thing -- do not modify any code files.
+          claude_args: |
+            --max-turns 6
+            --allowedTools "Bash,Read,Grep,Glob"
