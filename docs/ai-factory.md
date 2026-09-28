@@ -57,12 +57,20 @@ Go to https://github.com/apps/claude and install it on
 GitHub repo -> Settings -> Secrets and variables -> Actions -> New
 repository secret:
 
-1. `ANTHROPIC_API_KEY`: an API key generated from the Console at
-   https://platform.claude.com.
-   (If you use a Claude subscription instead of pay-as-you-go API billing,
-   use `CLAUDE_CODE_OAUTH_TOKEN` instead -- generate it locally with
-   `claude setup-token`, then replace the `anthropic_api_key` line in every
-   workflow with `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`.)
+1. `CLAUDE_CODE_OAUTH_TOKEN`: the workflows in this repo are already wired
+   up for a Claude subscription (Pro, Max, Team, or Enterprise), not
+   pay-as-you-go API billing. Generate the token locally:
+   - Make sure the Claude Code CLI is installed and logged into your
+     subscription (`claude login` if you have not already).
+   - Run `claude setup-token` in a terminal. It opens a browser
+     confirmation and then prints a long-lived OAuth token.
+   - Copy that token into the repository secret `CLAUDE_CODE_OAUTH_TOKEN`.
+
+   If you would rather pay per token instead of using your subscription,
+   generate an API key from the Console at https://platform.claude.com
+   instead, store it as an `ANTHROPIC_API_KEY` secret, and change every
+   `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}` line
+   back to `anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}`.
 
 2. `GH_AUTOMATION_PAT`: **this step matters, do not skip it.**
    GitHub Actions' default `GITHUB_TOKEN` has an anti-recursion mechanism:
