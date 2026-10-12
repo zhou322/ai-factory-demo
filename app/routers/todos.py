@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.models import Todo, TodoCreate, TodoUpdate
+from app.models import Todo, TodoCount, TodoCreate, TodoUpdate
 
 router = APIRouter(prefix="/todos", tags=["todos"])
 
@@ -35,6 +35,12 @@ def create_todo(payload: TodoCreate) -> Todo:
     _todos[todo.id] = todo
     _next_id += 1
     return todo
+
+
+# Must be declared before "/{todo_id}" so "count" is not parsed as a todo id.
+@router.get("/count", response_model=TodoCount)
+def count_todos() -> TodoCount:
+    return TodoCount(count=len(_todos))
 
 
 @router.get("/{todo_id}", response_model=Todo)
