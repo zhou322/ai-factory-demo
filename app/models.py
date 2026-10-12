@@ -20,3 +20,7 @@ class TodoUpdate(BaseModel):
 
 class Todo(TodoBase):
     id: int
+
+
+class TodoCount(BaseModel):
+    count: int = Field(..., ge=0, description="Total number of todos")
