@@ -25,7 +25,8 @@ jobs:
   claude:
     if: >
       contains(github.event.comment.body, '@claude') &&
-      !startsWith(github.event.comment.body, '/revise')
+      !startsWith(github.event.comment.body, '/revise') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
     permissions:
       contents: write
