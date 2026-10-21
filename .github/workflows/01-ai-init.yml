@@ -6,7 +6,11 @@ on:
 
 jobs:
   init:
-    if: contains(github.event.issue.labels.*.name, 'stage:init')
+    # The issue template auto-applies stage:init for anyone, so also require
+    # the author to be a repo owner/member/collaborator (public repo).
+    if: >
+      contains(github.event.issue.labels.*.name, 'stage:init') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
     runs-on: ubuntu-latest
     permissions:
       contents: read
